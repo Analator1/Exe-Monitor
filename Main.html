@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Activity Monitor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #313131;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #1c1c1c;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            border: 1px solid rgba(0, 123, 255, 0.2);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #f30a50 0%, #0056b3 100%);
+            padding: 30px 40px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header h1::before {
+            content: "📊";
+            font-size: 36px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            background: #0d0d0d;
+            border-bottom: 2px solid rgba(0, 123, 255, 0.3);
+        }
+        
+        .nav-tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            font-weight: 500;
+            color: #8b92b0;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .nav-tab:hover {
+            background: rgba(0, 123, 255, 0.1);
+            color: #a5b4fc;
+        }
+        
+        .nav-tab.active {
+            color: #ffd700;
+            border-bottom-color: #007bff;
+            background: #1c1c1c;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .controls {
+            background: linear-gradient(135deg, #1a1a1a 0%, #262626 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid rgba(0, 123, 255, 0.2);
+        }
+        
+        .controls label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            color: #ffd700;
+        }
+        
+        .controls input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #007bff;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #e0e7ff;
+            margin: 30px 0 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #007bff;
+            display: inline-block;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-bottom: 30px;
+            background: #1a1a1a;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 123, 255, 0.2);
+        }
+        
+        th, td {
+            padding: 16px 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 123, 255, 0.1);
+        }
+        
+        th {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+        }
+        
+        th:hover {
+            background: linear-gradient(135deg, #0069d9 0%, #004085 100%);
+        }
+        
+        tbody tr {
+            transition: all 0.3s ease;
+            color: #d1d5db;
+        }
+        
+        tbody tr:hover {
+            background: rgba(0, 123, 255, 0.1);
+            transform: scale(1.01);
+        }
+        
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .process-cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            color: #e0e7ff;
+        }
+        
+        .process-cell img {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .status-focused {
+            background: linear-gradient(135deg, #ffd700 0%, #ffc107 100%);
+            color: #000000;
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+        }
+        
+        .status-running {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.4);
+        }
+        
+        .status-closed {
+            background: #343a40;
+            color: #adb5bd;
+        }
+        
+        .sort-indicator {
+            display: inline-block;
+            margin-left: 8px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .time-value {
+            font-weight: 600;
+            color: #a5b4fc;
+            font-size: 15px;
+        }
+        
+        .terminate-btn {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .terminate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+        }
+        
+        .terminate-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .reset-btn {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-right: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .reset-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 193, 7, 0.4);
+        }
+        .chart-container {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 123, 255, 0.2);
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chart-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #e0e7ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-title::before {
+            content: "📈";
+            font-size: 24px;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+        }
+        
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+        
+        canvas {
+            max-height: 400px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 24px rgba(0, 123, 255, 0.4);
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .stat-icon {
+            font-size: 40px;
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .container { border-radius: 0; }
+            .header { padding: 20px; }
+            .header h1 { font-size: 24px; }
+            .content { padding: 20px; }
+            .nav-tab { padding: 12px 20px; font-size: 14px; }
+            th, td { padding: 12px; font-size: 14px; }
+            .chart-header { flex-direction: column; gap: 10px; align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Process Activity Monitor</h1>
+            <p>Real-time tracking of application usage and focus time</p>
+        </div>
+        
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchPage('dashboard')">📊 Dashboard</button>
+            <button class="nav-tab" onclick="switchPage('analytics')">📈 Analytics</button>
+            <button class="nav-tab" onclick="switchPage('history')">📅 History</button>
+        </div>
+        
+        <div class="content">
+            <div id="dashboard" class="page active">
+                <div class="controls">
+                    <label>
+                        <input type="checkbox" id="split-view-toggle" checked>
+                        <span>Split "Other Processes" by Icon Presence</span>
+                    </label>
+                </div>
+
+                <h2 class="section-title">Main Processes</h2>
+                <table id="main-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Process <span class="sort-indicator"></span></th>
+                            <th data-sort="status">Status <span class="sort-indicator"></span></th>
+                            <th data-sort="open_total_display">Total Open Time <span class="sort-indicator"></span></th>
+                            <th data-sort="focus_total_display">Total Focused Time <span class="sort-indicator"></span></th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="main-processes-body"></tbody>
+                </table>
+
+                <div id="other-processes-split-view">
+                    <h2 class="section-title">Other Processes with Icons</h2>
+                    <table id="other-table-icons">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">Process <span class="sort-indicator"></span></th>
+                                <th data-sort="status">Status <span class="sort-indicator"></span></th>
+                                <th data-sort="open_total_display">Total Open Time <span class="sort-indicator"></span></th>
+                                <th data-sort="focus_total_display">Total Focused Time <span class="sort-indicator"></span></th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="other-processes-icons-body"></tbody>
+                    </table>
+
+                    <h2 class="section-title">Other Processes without Icons</h2>
+                    <table id="other-table-no-icons">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">Process <span class="sort-indicator"></span></th>
+                                <th data-sort="status">Status <span class="sort-indicator"></span></th>
+                                <th data-sort="open_total_display">Total Open Time <span class="sort-indicator"></span></th>
+                                <th data-sort="focus_total_display">Total Focused Time <span class="sort-indicator"></span></th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="other-processes-no-icons-body"></tbody>
+                    </table>
+                </div>
+
+                <div id="other-processes-combined-view" style="display:none;">
+                    <h2 class="section-title">Other Running/Recent Processes</h2>
+                    <table id="other-table-combined">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">Process <span class="sort-indicator"></span></th>
+                                <th data-sort="status">Status <span class="sort-indicator"></span></th>
+                                <th data-sort="open_total_display">Total Open Time <span class="sort-indicator"></span></th>
+                                <th data-sort="focus_total_display">Total Focused Time <span class="sort-indicator"></span></th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="other-processes-combined-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="analytics" class="page">
+                <div class="controls">
+                    <button class="refresh-btn" onclick="refreshCharts()">
+                        <span>🔄</span>
+                        <span>Refresh Charts</span>
+                    </button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-label">Total Active Time</div>
+                        <div class="stat-value" id="total-time">0h 00m</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-label">Total Focused Time</div>
+                        <div class="stat-value" id="focused-time">0h 00m</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💻</div>
+                        <div class="stat-label">Active Processes</div>
+                        <div class="stat-value" id="active-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-label">Most Used App</div>
+                        <div class="stat-value" id="most-used" style="font-size: 20px;">-</div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title">Focus Time Distribution</div>
+                    </div>
+                    <canvas id="focusChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title">Total Usage Time by Application</div>
+                    </div>
+                    <canvas id="usageChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title">Top 10 Applications by Focus Time</div>
+                    </div>
+                    <canvas id="topAppsChart"></canvas>
+                </div>
+            </div>
+            <div id="history" class="page">
+                <div class="controls">
+                    <label for="date-select">Select Date:</label>
+                    <select id="date-select" style="padding: 8px 12px; border-radius: 6px; background: #1a1a1a; color: #e0e7ff; border: 1px solid rgba(0, 123, 255, 0.2);">
+                    </select>
+                    <label>
+                        <input type="checkbox" id="history-split-view-toggle" checked>
+                        <span>Split "Other Processes" by Icon Presence</span>
+                    </label>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">⏱️</div>
+                        <div class="stat-label">Total Active Time</div>
+                        <div class="stat-value" id="history-total-time">0h 00m</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-label">Total Focused Time</div>
+                        <div class="stat-value" id="history-focused-time">0h 00m</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💻</div>
+                        <div class="stat-label">Total Processes Tracked</div>
+                        <div class="stat-value" id="history-tracked-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⭐</div>
+                        <div class="stat-label">Most Used App</div>
+                        <div class="stat-value" id="history-most-used" style="font-size: 20px;">-</div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title">Focus Time Distribution</div>
+                    </div>
+                    <canvas id="historyFocusChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title">Total Usage Time by Application</div>
+                    </div>
+                    <canvas id="historyUsageChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title">Top 10 Applications by Focus Time</div>
+                    </div>
+                    <canvas id="historyTopAppsChart"></canvas>
+                </div>
+                <h2 class="section-title">Main Processes</h2>
+                <table id="history-main-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Process <span class="sort-indicator"></span></th>
+                            <th data-sort="status">Status <span class="sort-indicator"></span></th>
+                            <th data-sort="open_total_display">Total Open Time <span class="sort-indicator"></span></th>
+                            <th data-sort="focus_total_display">Total Focused Time <span class="sort-indicator"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-main-processes-body"></tbody>
+                </table>
+
+                <div id="history-other-processes-split-view">
+                    <h2 class="section-title">Other Processes with Icons</h2>
+                    <table id="history-other-table-icons">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">Process <span class="sort-indicator"></span></th>
+                                <th data-sort="status">Status <span class="sort-indicator"></span></th>
+                                <th data-sort="open_total_display">Total Open Time <span class="sort-indicator"></span></th>
+                                <th data-sort="focus_total_display">Total Focused Time <span class="sort-indicator"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-other-processes-icons-body"></tbody>
+                    </table>
+
+                    <h2 class="section-title">Other Processes without Icons</h2>
+                    <table id="history-other-table-no-icons">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">Process <span class="sort-indicator"></span></th>
+                                <th data-sort="status">Status <span class="sort-indicator"></span></th>
+                                <th data-sort="open_total_display">Total Open Time <span class="sort-indicator"></span></th>
+                                <th data-sort="focus_total_display">Total Focused Time <span class="sort-indicator"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-other-processes-no-icons-body"></tbody>
+                    </table>
+                </div>
+
+                <div id="history-other-processes-combined-view" style="display:none;">
+                    <h2 class="section-title">Other Processes</h2>
+                    <table id="history-other-table-combined">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">Process <span class="sort-indicator"></span></th>
+                                <th data-sort="status">Status <span class="sort-indicator"></span></th>
+                                <th data-sort="open_total_display">Total Open Time <span class="sort-indicator"></span></th>
+                                <th data-sort="focus_total_display">Total Focused Time <span class="sort-indicator"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-other-processes-combined-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+        const tableSorts = {
+            'main-table': { sortBy: 'focus_total_display', sortOrder: 'desc' },
+            'other-table-icons': { sortBy: 'focus_total_display', sortOrder: 'desc' },
+            'other-table-no-icons': { sortBy: 'focus_total_display', sortOrder: 'desc' },
+            'other-table-combined': { sortBy: 'focus_total_display', sortOrder: 'desc' },
+            'history-main-table': { sortBy: 'focus_total_display', sortOrder: 'desc' },
+            'history-other-table-icons': { sortBy: 'focus_total_display', sortOrder: 'desc' },
+            'history-other-table-no-icons': { sortBy: 'focus_total_display', sortOrder: 'desc' },
+            'history-other-table-combined': { sortBy: 'focus_total_display', sortOrder: 'desc' }
+        };
+
+        let focusChart, usageChart, topAppsChart;
+        let historyFocusChart, historyUsageChart, historyTopAppsChart;
+        let currentData = null;
+        let chartsInitialized = false;
+
+        function switchPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(pageName).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (pageName === 'analytics' && !chartsInitialized) {
+                refreshCharts();
+            } else if (pageName === 'history') {
+                loadAvailableDates();
+            }
+        }
+
+        function refreshCharts() {
+            if (currentData) {
+                updateCharts(currentData);
+                chartsInitialized = true;
+            }
+        }
+
+        function formatSeconds(s) {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const sec = Math.floor(s % 60);
+            return `${h}h ${String(m).padStart(2, '0')}m ${String(sec).padStart(2, '0')}s`;
+        }
+
+        function formatSecondsShort(s) {
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            if (h > 0) return `${h}h ${m}m`;
+            if (m > 0) return `${m}m`;
+            return `${Math.floor(s)}s`;
+        }
+
+        function getSortKey(sortBy) {
+            if (sortBy === 'name' || sortBy === 'status') {
+                return x => x[sortBy].toLowerCase();
+            } else {
+                return x => x[sortBy] || 0;
+            }
+        }
+
+        function sortData(data, sortBy, sortOrder) {
+            const sorted = [...data];
+            const key = getSortKey(sortBy);
+            sorted.sort((a, b) => {
+                let va = key(a), vb = key(b);
+                if (va < vb) return sortOrder === 'asc' ? -1 : 1;
+                if (va > vb) return sortOrder === 'asc' ? 1 : -1;
+                return 0;
+            });
+            return sorted;
+        }
+
+        function updateTable(tableBodyId, processes, isMainTable = false) {
+            const tableBody = document.getElementById(tableBodyId);
+            tableBody.innerHTML = '';
+            processes.forEach(proc => {
+                const row = document.createElement('tr');
+                
+                let statusClass = 'status-closed';
+                if (proc.status === 'Focused') statusClass = 'status-focused';
+                if (proc.status === 'Running') statusClass = 'status-running';
+
+                const iconHtml = proc.icon 
+                    ? `<img src="${proc.icon}" alt="icon">` 
+                    : `<div style="width:32px; height:32px; margin-right:12px;"></div>`;
+
+                const resetBtnHtml = isMainTable 
+                    ? `<button class="reset-btn" data-name="${proc.name}">Reset</button>` 
+                    : '';
+
+                row.innerHTML = `
+                    <td><div class="process-cell">${iconHtml}<span>${proc.name}</span></div></td>
+                    <td><span class="status ${statusClass}">${proc.status}</span></td>
+                    <td><span class="time-value">${formatSeconds(proc.open_total_display)}</span></td>
+                    <td><span class="time-value">${formatSeconds(proc.focus_total_display)}</span></td>
+                    <td>
+                        ${resetBtnHtml}
+                        <button class="terminate-btn" data-name="${proc.name}" ${proc.status === 'Closed' ? 'disabled' : ''}>
+                            Terminate
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            if (isMainTable) {
+                document.querySelectorAll(`#${tableBodyId} .reset-btn`).forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const name = e.target.dataset.name;
+                        if (!confirm(`Are you sure you want to reset timers for ${name} today?`)) return;
+                        
+                        try {
+                            const response = await fetch('/reset_timer', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ name })
+                            });
+                            const result = await response.json();
+                            if (result.success) {
+                                fetchData();
+                            } else {
+                                alert('Failed to reset timer.');
+                            }
+                        } catch (error) {
+                            console.error('Error resetting timer:', error);
+                            alert('Error resetting timer.');
+                        }
+                    });
+                });
+            }
+
+            document.querySelectorAll(`#${tableBodyId} .terminate-btn`).forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const name = e.target.dataset.name;
+                    try {
+                        const response = await fetch('/terminate', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            fetchData();
+                        } else {
+                            alert('Failed to terminate process.');
+                        }
+                    } catch (error) {
+                        console.error('Error terminating process:', error);
+                        alert('Error terminating process.');
+                    }
+                });
+            });
+        }
+
+        function updateSortIndicators(tableId) {
+            document.querySelectorAll(`#${tableId} th .sort-indicator`).forEach(span => span.textContent = '');
+            const { sortBy, sortOrder } = tableSorts[tableId];
+            const activeHeader = document.querySelector(`#${tableId} th[data-sort="${sortBy}"]`);
+            if (activeHeader) {
+                const indicator = activeHeader.querySelector('.sort-indicator');
+                if (indicator) {
+                    indicator.textContent = sortOrder === 'asc' ? '▲' : '▼';
+                }
+            }
+        }
+
+        function updateHistoryTable(tableBodyId, processes) {
+            const tableBody = document.getElementById(tableBodyId);
+            tableBody.innerHTML = '';
+            processes.forEach(proc => {
+                const row = document.createElement('tr');
+                
+                let statusClass = 'status-closed';
+                if (proc.status === 'Focused') statusClass = 'status-focused';
+                if (proc.status === 'Running') statusClass = 'status-running';
+
+                const iconHtml = proc.icon 
+                    ? `<img src="${proc.icon}" alt="icon">` 
+                    : `<div style="width:32px; height:32px; margin-right:12px;"></div>`;
+
+                row.innerHTML = `
+                    <td><div class="process-cell">${iconHtml}<span>${proc.name}</span></div></td>
+                    <td><span class="status ${statusClass}">${proc.status}</span></td>
+                    <td><span class="time-value">${formatSeconds(proc.open_total_display)}</span></td>
+                    <td><span class="time-value">${formatSeconds(proc.focus_total_display)}</span></td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        async function loadAvailableDates() {
+            try {
+                const response = await fetch('/available_dates');
+                const data = await response.json();
+                const select = document.getElementById('date-select');
+                select.innerHTML = '';
+                data.dates.forEach(date => {
+                    const option = document.createElement('option');
+                    option.value = date;
+                    option.textContent = date;
+                    select.appendChild(option);
+                });
+                if (data.dates.length > 1) {
+                    select.value = data.dates[1];
+                } else if (data.dates.length === 1) {
+                    select.value = data.dates[0];
+                }
+                loadHistoricalData(select.value);
+            } catch (error) {
+                console.error("Failed to load dates:", error);
+            }
+        }
+
+        async function loadHistoricalData(dateStr) {
+            try {
+                const response = await fetch(`/data/${dateStr}`);
+                if (!response.ok) {
+                    throw new Error('No data');
+                }
+                const data = await response.json();
+
+                updateHistoryCharts(data);
+                const isSplitView = document.getElementById('history-split-view-toggle').checked;
+                
+                document.getElementById('history-other-processes-split-view').style.display = isSplitView ? '' : 'none';
+                document.getElementById('history-other-processes-combined-view').style.display = isSplitView ? 'none' : '';
+                
+                const mainData = sortData(data.main_procs, tableSorts['history-main-table'].sortBy, tableSorts['history-main-table'].sortOrder);
+                updateHistoryTable('history-main-processes-body', mainData);
+                updateSortIndicators('history-main-table');
+
+                if (isSplitView) {
+                    const withIcons = data.other_procs.filter(p => p.has_icon);
+                    const withoutIcons = data.other_procs.filter(p => !p.has_icon);
+                    const iconsData = sortData(withIcons, tableSorts['history-other-table-icons'].sortBy, tableSorts['history-other-table-icons'].sortOrder);
+                    updateHistoryTable('history-other-processes-icons-body', iconsData);
+                    updateSortIndicators('history-other-table-icons');
+                    const noIconsData = sortData(withoutIcons, tableSorts['history-other-table-no-icons'].sortBy, tableSorts['history-other-table-no-icons'].sortOrder);
+                    updateHistoryTable('history-other-processes-no-icons-body', noIconsData);
+                    updateSortIndicators('history-other-table-no-icons');
+                } else {
+                    const combinedData = sortData(data.other_procs, tableSorts['history-other-table-combined'].sortBy, tableSorts['history-other-table-combined'].sortOrder);
+                    updateHistoryTable('history-other-processes-combined-body', combinedData);
+                    updateSortIndicators('history-other-table-combined');
+                }
+            } catch (error) {
+                console.error("Failed to load historical data:", error);
+            }
+        }
+
+        function setupSortListeners(tableId) {
+            document.querySelectorAll(`#${tableId} th[data-sort]`).forEach(header => {
+                header.addEventListener('click', () => {
+                    const sortBy = header.getAttribute('data-sort');
+                    const config = tableSorts[tableId];
+                    if (config.sortBy === sortBy) {
+                        config.sortOrder = config.sortOrder === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        config.sortBy = sortBy;
+                        config.sortOrder = 'desc';
+                    }
+                    fetchData();
+                });
+            });
+        }
+
+        function updateCharts(data) {
+            const allProcs = [...data.main_procs, ...data.other_procs];
+            const filtered = allProcs.filter(p => p.focus_total_display > 0);
+            
+            const totalTime = allProcs.reduce((sum, p) => sum + p.open_total_display, 0);
+            const focusedTime = allProcs.reduce((sum, p) => sum + p.focus_total_display, 0);
+            const activeCount = allProcs.filter(p => p.status !== 'Closed').length;
+            const mostUsed = filtered.length > 0 ? 
+                filtered.reduce((a, b) => a.focus_total_display > b.focus_total_display ? a : b).name : '-';
+            
+            document.getElementById('total-time').textContent = formatSecondsShort(totalTime);
+            document.getElementById('focused-time').textContent = formatSecondsShort(focusedTime);
+            document.getElementById('active-count').textContent = activeCount;
+            document.getElementById('most-used').textContent = mostUsed;
+
+            filtered.sort((a, b) => b.focus_total_display - a.focus_total_display);
+            
+            const top10 = filtered.slice(0, 10);
+            const labels = top10.map(p => p.name);
+            const focusData = top10.map(p => (p.focus_total_display / 60).toFixed(1));
+            const usageData = top10.map(p => (p.open_total_display / 60).toFixed(1));
+            
+            const colors = [
+                '#007bff',
+                '#ff6f61',
+                '#28a745',
+                '#6f42c1',
+                '#ffa600',
+                '#17a2b8',
+                '#dc3545',
+                '#f093fb',
+                '#4facfe',
+                '#43e97b',
+                '#ffd700',
+                '#8a2be2',
+                '#fd7e14',
+                '#20c997',
+                '#e83e8c',
+                '#30cfd0',
+                '#a8edea',
+                '#495057',
+                '#fed6e3',
+                '#667eea'
+            ];
+
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { 
+                        labels: { color: '#e0e7ff' }
+                    }
+                }
+            };
+
+            if (focusChart) focusChart.destroy();
+            focusChart = new Chart(document.getElementById('focusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: focusData,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#1c1c1c'
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    plugins: {
+                        ...chartOptions.plugins,
+                        legend: { position: 'right', labels: { color: '#e0e7ff' } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `${ctx.label}: ${ctx.parsed} minutes`
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (usageChart) usageChart.destroy();
+            usageChart = new Chart(document.getElementById('usageChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Minutes',
+                        data: usageData,
+                        backgroundColor: colors,
+                        borderWidth: 0,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    ...chartOptions,
+                    plugins: {
+                        ...chartOptions.plugins,
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Minutes', color: '#e0e7ff' },
+                            ticks: { color: '#8b92b0' },
+                            grid: { color: 'rgba(0, 123, 255, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#8b92b0' },
+                            grid: { color: 'rgba(0, 123, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+
+            if (topAppsChart) topAppsChart.destroy();
+            topAppsChart = new Chart(document.getElementById('topAppsChart'), {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Focus Time (minutes)',
+                        data: focusData,
+                        backgroundColor: 'rgba(0, 123, 255, 0.8)',
+                        borderColor: '#007bff',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    plugins: {
+                        ...chartOptions.plugins,
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Minutes', color: '#e0e7ff' },
+                            ticks: { color: '#8b92b0' },
+                            grid: { color: 'rgba(0, 123, 255, 0.1)' }
+                        },
+                        x: {
+                            ticks: { color: '#8b92b0' },
+                            grid: { color: 'rgba(0, 123, 255, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+    function updateHistoryCharts(data) {
+            const allProcs = [...data.main_procs, ...data.other_procs];
+            const filtered = allProcs.filter(p => p.focus_total_display > 0);
+            
+            const totalTime = allProcs.reduce((sum, p) => sum + p.open_total_display, 0);
+            const focusedTime = allProcs.reduce((sum, p) => sum + p.focus_total_display, 0);
+            const trackedCount = allProcs.length;
+            const mostUsed = filtered.length > 0 ? 
+                filtered.reduce((a, b) => a.focus_total_display > b.focus_total_display ? a : b).name : '-';
+            
+            document.getElementById('history-total-time').textContent = formatSecondsShort(totalTime);
+            document.getElementById('history-focused-time').textContent = formatSecondsShort(focusedTime);
+            document.getElementById('history-tracked-count').textContent = trackedCount;
+            document.getElementById('history-most-used').textContent = mostUsed;
+
+            filtered.sort((a, b) => b.focus_total_display - a.focus_total_display);
+            
+            const top10 = filtered.slice(0, 10);
+            const labels = top10.map(p => p.name);
+            const focusData = top10.map(p => (p.focus_total_display / 60).toFixed(1));
+            const usageData = top10.map(p => (p.open_total_display / 60).toFixed(1));
+            
+            const colors = [
+                '#007bff',
+                '#ff6f61',
+                '#28a745',
+                '#6f42c1',
+                '#ffa600',
+                '#17a2b8',
+                '#dc3545',
+                '#f093fb',
+                '#4facfe',
+                '#43e97b',
+                '#ffd700',
+                '#8a2be2',
+                '#fd7e14',
+                '#20c997',
+                '#e83e8c',
+                '#30cfd0',
+                '#a8edea',
+                '#495057',
+                '#fed6e3',
+                '#667eea'
+            ];
+
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: { legend: { labels: { color: '#e0e7ff' } } }
+            };
+
+            if (historyFocusChart) historyFocusChart.destroy();
+            historyFocusChart = new Chart(document.getElementById('historyFocusChart'), {
+                type: 'doughnut',
+                data: { labels: labels, datasets: [{ data: focusData, backgroundColor: colors, borderWidth: 2, borderColor: '#1c1c1c' }] },
+                options: { ...chartOptions, plugins: { ...chartOptions.plugins, legend: { position: 'right', labels: { color: '#e0e7ff' } }, tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed} minutes` } } } }
+            });
+
+            if (historyUsageChart) historyUsageChart.destroy();
+            historyUsageChart = new Chart(document.getElementById('historyUsageChart'), {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ label: 'Minutes', data: usageData, backgroundColor: colors, borderWidth: 0, borderRadius: 8 }] },
+                options: { indexAxis: 'y', ...chartOptions, plugins: { ...chartOptions.plugins, legend: { display: false } }, scales: { x: { beginAtZero: true, title: { display: true, text: 'Minutes', color: '#e0e7ff' }, ticks: { color: '#8b92b0' }, grid: { color: 'rgba(0, 123, 255, 0.1)' } }, y: { ticks: { color: '#8b92b0' }, grid: { color: 'rgba(0, 123, 255, 0.1)' } } } }
+            });
+
+            if (historyTopAppsChart) historyTopAppsChart.destroy();
+            historyTopAppsChart = new Chart(document.getElementById('historyTopAppsChart'), {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ label: 'Focus Time (minutes)', data: focusData, backgroundColor: 'rgba(0, 123, 255, 0.8)', borderColor: '#007bff', borderWidth: 2, borderRadius: 8 }] },
+                options: { ...chartOptions, plugins: { ...chartOptions.plugins, legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Minutes', color: '#e0e7ff' }, ticks: { color: '#8b92b0' }, grid: { color: 'rgba(0, 123, 255, 0.1)' } }, x: { ticks: { color: '#8b92b0' }, grid: { color: 'rgba(0, 123, 255, 0.1)' } } } }
+            });
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch('/data');
+                const data = await response.json();
+                currentData = data;
+                
+                const isSplitView = document.getElementById('split-view-toggle').checked;
+                
+                document.getElementById('other-processes-split-view').style.display = isSplitView ? '' : 'none';
+                document.getElementById('other-processes-combined-view').style.display = isSplitView ? 'none' : '';
+
+                const mainData = sortData(data.main_procs, tableSorts['main-table'].sortBy, tableSorts['main-table'].sortOrder);
+                updateTable('main-processes-body', mainData, true);
+                updateSortIndicators('main-table');
+
+                if (isSplitView) {
+                    const withIcons = data.other_procs.filter(p => p.has_icon);
+                    const withoutIcons = data.other_procs.filter(p => !p.has_icon);
+                    const iconsData = sortData(withIcons, tableSorts['other-table-icons'].sortBy, tableSorts['other-table-icons'].sortOrder);
+                    updateTable('other-processes-icons-body', iconsData);
+                    updateSortIndicators('other-table-icons');
+                    const noIconsData = sortData(withoutIcons, tableSorts['other-table-no-icons'].sortBy, tableSorts['other-table-no-icons'].sortOrder);
+                    updateTable('other-processes-no-icons-body', noIconsData);
+                    updateSortIndicators('other-table-no-icons');
+                } else {
+                    const combinedData = sortData(data.other_procs, tableSorts['other-table-combined'].sortBy, tableSorts['other-table-combined'].sortOrder);
+                    updateTable('other-processes-combined-body', combinedData);
+                    updateSortIndicators('other-table-combined');
+                }
+
+            } catch (error) {
+                console.error("Failed to fetch data:", error);
+            }
+        }
+
+        setupSortListeners('main-table');
+        setupSortListeners('other-table-icons');
+        setupSortListeners('other-table-no-icons');
+        setupSortListeners('other-table-combined');
+        setupSortListeners('history-main-table');
+        setupSortListeners('history-other-table-icons');
+        setupSortListeners('history-other-table-no-icons');
+        setupSortListeners('history-other-table-combined');
+
+        document.getElementById('split-view-toggle').addEventListener('change', fetchData);
+        document.getElementById('date-select').addEventListener('change', (e) => loadHistoricalData(e.target.value));
+        document.getElementById('history-split-view-toggle').addEventListener('change', () => loadHistoricalData(document.getElementById('date-select').value));
+        fetchData();
+        setInterval(fetchData, 1500);
+    </script>
+</body>
+</html>

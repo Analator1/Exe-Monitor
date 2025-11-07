@@ -1,0 +1,6 @@
+psutil
+pypresence
+pywin32
+Flask
+rich
+Pillow
